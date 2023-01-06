@@ -47,10 +47,16 @@ namespace locacao_veiculos.Controllers
         }
 
         // GET: Carros/Create
-        public IActionResult Create()
+        public IActionResult Create(int? MarcaId, string Nome)
         {
-            ViewData["MarcaId"] = new SelectList(_context.Marcas, "Id", "Nome");
-            ViewData["ModeloId"] = new SelectList(_context.Modelos, "Id", "Nome");
+            ViewBag.nome = Nome;
+            var marcas = _context.Marcas.ToList();
+            if(MarcaId is null) MarcaId = marcas[0].Id;
+            var modelos = (marcas.Count > 0) ? _context.Modelos.Where(m => m.MarcaId == MarcaId).ToList() : new List<Modelo>();
+
+            ViewData["MarcaId"] = new SelectList(marcas, "Id", "Nome");
+            ViewData["ModeloId"] = new SelectList(modelos, "Id", "Nome");
+
             return View();
         }
 
