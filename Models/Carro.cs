@@ -9,8 +9,4 @@ public class Carro
 
     public Modelo? Modelo { get;set; }
 
-    public int MarcaId { get;set; } = default!;
-
-    public Marca? Marca { get;set; }
-
 }

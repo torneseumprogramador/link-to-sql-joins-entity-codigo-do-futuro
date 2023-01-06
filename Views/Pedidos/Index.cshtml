@@ -1,8 +1,15 @@
-@model IEnumerable<locacao_veiculos.Models.Pedido>
+@model IEnumerable<locacao_veiculos.Models.Pedido>;
+@using locacao_veiculos.ModelViews;
 
 @{
+    
     ViewData["Title"] = "Index";
+    var json = Json.Serialize(Model);
 }
+
+<script>
+    var json = @json
+</script>
 
 <h1>Index</h1>
 
@@ -13,47 +20,53 @@
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Cliente)
+                Cliente
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Carro)
+                Carro
             </th>
             <th>
                 Marca
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.DataLocacao)
+                Modelo
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.DataEntrega)
+                Data de Locação
+            </th>
+            <th>
+                Data de Entrega
             </th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.Cliente.Nome)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Carro.Nome)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Carro.Marca.Nome)
-            </td>
-            <td>
-               @item.DataLocacao.ToString("dd/MM/yyyy HH:mm")
-            </td>
-            <td>
-                @item.DataEntrega.ToString("dd/MM/yyyy HH:mm")
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-            </td>
-        </tr>
-}
+        @foreach (PedidoResumido pedido in ViewBag.pedidos) {
+            <tr>
+                <td>
+                    @pedido.NomeCliente
+                </td>
+                <td>
+                    @pedido.NomeCarro
+                </td>
+                <td>
+                    @pedido.MarcaDoCarro
+                </td>
+                <td>
+                    @pedido.ModeloDoCarro
+                </td>
+                <td>
+                    @pedido.DataLocacaoPedido.ToString("dd/MM/yyyy HH:mm")
+                </td>
+                <td>
+                    @pedido.DataEntregaPedido.ToString("dd/MM/yyyy HH:mm")
+                </td>
+                <td>
+                    <a asp-action="Edit" asp-route-id="@pedido.PedidoId">Edit</a> |
+                    <a asp-action="Details" asp-route-id="@pedido.PedidoId">Details</a> |
+                    <a asp-action="Delete" asp-route-id="@pedido.PedidoId">Delete</a>
+                </td>
+            </tr>
+        }
     </tbody>
 </table>

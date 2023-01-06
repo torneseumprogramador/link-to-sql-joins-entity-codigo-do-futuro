@@ -22,7 +22,7 @@ namespace locacao_veiculos.Controllers
         // GET: Carros
         public async Task<IActionResult> Index()
         {
-            var locacaoContext = _context.Carros.Include(c => c.Marca).Include(c => c.Modelo);
+            var locacaoContext = _context.Carros.Include(c => c.Modelo).Include(c => c.Modelo.Marca);
             return View(await locacaoContext.ToListAsync());
         }
 
@@ -35,7 +35,6 @@ namespace locacao_veiculos.Controllers
             }
 
             var carro = await _context.Carros
-                .Include(c => c.Marca)
                 .Include(c => c.Modelo)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (carro == null)
@@ -59,7 +58,7 @@ namespace locacao_veiculos.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Nome,ModeloId,MarcaId")] Carro carro)
+        public async Task<IActionResult> Create([Bind("Id,Nome,ModeloId")] Carro carro)
         {
             if (ModelState.IsValid)
             {
@@ -67,7 +66,6 @@ namespace locacao_veiculos.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["MarcaId"] = new SelectList(_context.Marcas, "Id", "Nome", carro.MarcaId);
             ViewData["ModeloId"] = new SelectList(_context.Modelos, "Id", "Nome", carro.ModeloId);
             return View(carro);
         }
@@ -85,7 +83,6 @@ namespace locacao_veiculos.Controllers
             {
                 return NotFound();
             }
-            ViewData["MarcaId"] = new SelectList(_context.Marcas, "Id", "Nome", carro.MarcaId);
             ViewData["ModeloId"] = new SelectList(_context.Modelos, "Id", "Nome", carro.ModeloId);
             return View(carro);
         }
@@ -95,7 +92,7 @@ namespace locacao_veiculos.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Nome,ModeloId,MarcaId")] Carro carro)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Nome,ModeloId")] Carro carro)
         {
             if (id != carro.Id)
             {
@@ -122,7 +119,6 @@ namespace locacao_veiculos.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["MarcaId"] = new SelectList(_context.Marcas, "Id", "Nome", carro.MarcaId);
             ViewData["ModeloId"] = new SelectList(_context.Modelos, "Id", "Nome", carro.ModeloId);
             return View(carro);
         }
@@ -136,7 +132,6 @@ namespace locacao_veiculos.Controllers
             }
 
             var carro = await _context.Carros
-                .Include(c => c.Marca)
                 .Include(c => c.Modelo)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (carro == null)

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using locacao_veiculos.Database;
 using locacao_veiculos.Models;
+using locacao_veiculos.ModelViews;
 
 namespace locacao_veiculos.Controllers
 {
@@ -22,12 +23,93 @@ namespace locacao_veiculos.Controllers
         // GET: Pedidos
         public async Task<IActionResult> Index()
         {
-            var pedidosSql = _context.Pedidos.Join(
+            /*
+            // query força bruta
+            var pedidos = new List<PedidoResumido>();
+            using (var command = _context.Database.GetDbConnection().CreateCommand())
+            {
+                command.CommandText = """
+                    SELECT 
+                        p.Id,
+                        c.Nome AS NomeCliente,
+                        c0.Nome AS NomeCarro,
+                        m.Nome AS MarcaDoCarro,
+                        p.DataLocacao AS DataLocacaoPedido,
+                        p.DataEntrega AS DataEntregaPedido
+                    FROM Pedidos AS p
+                    INNER JOIN Clientes AS c ON p.ClienteId = c.Id
+                    INNER JOIN Carros AS c0 ON p.CarroId = c0.Id
+                    INNER JOIN Marcas AS m ON c0.MarcaId = m.Id
+                """;
+
+                _context.Database.OpenConnection();
+                using (var result = command.ExecuteReader())
+                {
+                    while (result.Read())
+                    {
+                        pedidos.Add(new PedidoResumido{
+                            PedidoId = Convert.ToInt32(result["Id"]),
+                            NomeCliente = result["NomeCliente"]?.ToString(),
+                            MarcaDoCarro = result["MarcaDoCarro"]?.ToString(),
+                            DataEntregaPedido = Convert.ToDateTime(result["DataEntregaPedido"]),
+                            DataLocacaoPedido = Convert.ToDateTime(result["DataLocacaoPedido"]),
+                        });
+                    }
+                }
+            }
+            */
+            /*
+            // query força bruta encapsulado
+
+            object[] parameters =  { 1 };
+
+            var query = $@"""
+                    SELECT 
+                        p.Id,
+                        c.Nome AS NomeCliente,
+                        c0.Nome AS NomeCarro,
+                        m.Nome AS MarcaDoCarro,
+                        p.DataLocacao AS DataLocacaoPedido,
+                        p.DataEntrega AS DataEntregaPedido
+                    FROM Pedidos AS p
+                    INNER JOIN Clientes AS c ON p.ClienteId = c.Id
+                    INNER JOIN Carros AS c0 ON p.CarroId = c0.Id
+                    INNER JOIN Marcas AS m ON c0.MarcaId = m.Id
+                    where p.Id={0}
+            """;
+            var pedidos2 = new SqlQueryFromRaw(_context).SqlQueryRaw(query, parameters);
+            */
+            
+            // ==== link to sql
+            var pedidos =  await Task.FromResult(
+                from ped in _context.Pedidos
+                join cli in _context.Clientes on ped.ClienteId equals cli.Id
+                join car in _context.Carros on ped.CarroId equals car.Id
+                join mod in _context.Modelos on car.ModeloId equals mod.Id
+                join mar in _context.Marcas on mod.MarcaId equals mar.Id
+                select new PedidoResumido {
+                    PedidoId = ped.Id,
+                    NomeCliente = cli.Nome,
+                    NomeCarro = car.Nome,
+                    ModeloDoCarro = mod.Nome,
+                    MarcaDoCarro = mar.Nome,
+                    DataLocacaoPedido = ped.DataLocacao,
+                    DataEntregaPedido = ped.DataEntrega
+                }
+            );
+            
+
+
+            /*
+            //===== Join nativo do entity
+            var pedidos = await _context.Pedidos.Join(
                 _context.Clientes,
                 ped => ped.ClienteId,
                 cli => cli.Id,
                 (ped, cli) => new {
                     PedidoId = ped.Id,
+                    DataLocacaoPedido = ped.DataLocacao,
+                    DataEntregaPedido = ped.DataEntrega,
                     NomeCliente = cli.Nome,
                     CarroId = ped.CarroId
                 }
@@ -39,26 +121,27 @@ namespace locacao_veiculos.Controllers
                     PedidoId = pedCli.PedidoId,
                     NomeCliente = pedCli.NomeCliente,
                     NomeCarro = carro.Nome,
-                    MarcaId = carro.MarcaId
+                    MarcaId = carro.MarcaId,
+                    DataLocacaoPedido = pedCli.DataLocacaoPedido,
+                    DataEntregaPedido = pedCli.DataEntregaPedido
                 }
             ).Join(
                 _context.Marcas,
                 pedCliCarr => pedCliCarr.MarcaId,
                 marca => marca.Id,
-                (pedCliCarr, marca) => new {
+                (pedCliCarr, marca) => new PedidoResumido {
                     PedidoId = pedCliCarr.PedidoId,
                     NomeCliente = pedCliCarr.NomeCliente,
                     NomeCarro = pedCliCarr.NomeCarro,
-                    MarcaDoCarro = marca.Nome
+                    MarcaDoCarro = marca.Nome,
+                    DataLocacaoPedido = pedCliCarr.DataLocacaoPedido,
+                    DataEntregaPedido = pedCliCarr.DataEntregaPedido
                 }
-            ).ToQueryString();
+            ).ToListAsync();
+            */
 
-            Console.WriteLine("==================[");
-            Console.WriteLine(pedidosSql);
-            Console.WriteLine("]==================");
-
-            var locacaoContext = _context.Pedidos.Include(p => p.Carro).Include(p => p.Cliente).Include(p=> p.Carro.Marca );
-            return View(await locacaoContext.ToListAsync());
+            ViewBag.pedidos = pedidos;
+            return View();
         }
 
         // GET: Pedidos/Details/5
