@@ -51,131 +51,91 @@ namespace locacao_veiculos.Controllers
 
             Console.WriteLine("======================");
 
-            /*
-            // query força bruta
-            var pedidos = new List<PedidoResumido>();
-            using (var command = _context.Database.GetDbConnection().CreateCommand())
-            {
-                command.CommandText = """
-                    SELECT 
-                        p.Id,
-                        c.Nome AS NomeCliente,
-                        c0.Nome AS NomeCarro,
-                        m.Nome AS MarcaDoCarro,
-                        p.DataLocacao AS DataLocacaoPedido,
-                        p.DataEntrega AS DataEntregaPedido
-                    FROM Pedidos AS p
-                    INNER JOIN Clientes AS c ON p.ClienteId = c.Id
-                    INNER JOIN Carros AS c0 ON p.CarroId = c0.Id
-                    INNER JOIN Marcas AS m ON c0.MarcaId = m.Id
-                """;
-
-                _context.Database.OpenConnection();
-                using (var result = command.ExecuteReader())
-                {
-                    while (result.Read())
-                    {
-                        pedidos.Add(new PedidoResumido{
-                            PedidoId = Convert.ToInt32(result["Id"]),
-                            NomeCliente = result["NomeCliente"]?.ToString(),
-                            MarcaDoCarro = result["MarcaDoCarro"]?.ToString(),
-                            DataEntregaPedido = Convert.ToDateTime(result["DataEntregaPedido"]),
-                            DataLocacaoPedido = Convert.ToDateTime(result["DataLocacaoPedido"]),
-                        });
-                    }
-                }
-            }
-            */
-            
-            /*
-            // query força bruta encapsulado
-            object[] parameters =  { 1 };
-
-            var limit = 10;
-            var offset = 0;
-
-            var query = $@"""
-                    SELECT 
-                        p.Id,
-                        c.Nome AS NomeCliente,
-                        c0.Nome AS NomeCarro,
-                        m.Nome AS MarcaDoCarro,
-                        p.DataLocacao AS DataLocacaoPedido,
-                        p.DataEntrega AS DataEntregaPedido
-                    FROM Pedidos AS p
-                    INNER JOIN Clientes AS c ON p.ClienteId = c.Id
-                    INNER JOIN Carros AS c0 ON p.CarroId = c0.Id
-                    INNER JOIN Marcas AS m ON c0.MarcaId = m.Id
-                    where p.Id={0}
-                    limit {limit} offset {offset}
-            """;
-            var pedidos2 = new SqlQueryFromRaw(_context).SqlQueryRaw(query, parameters);
-            */
             
             // ==== link to sql
             var pedidos =  await Task.FromResult(
                 (
                     from ped in _context.Pedidos
                     join cli in _context.Clientes on ped.ClienteId equals cli.Id
-                    join car in _context.Carros on ped.CarroId equals car.Id
+                    join pedCarro in _context.PedidoCarros on ped.Id equals pedCarro.PedidoId
+                    join car in _context.Carros on pedCarro.CarroId equals car.Id
                     join mod in _context.Modelos on car.ModeloId equals mod.Id
                     join mar in _context.Marcas on mod.MarcaId equals mar.Id
+                    group pedCarro by new {
+                        Id = ped.Id,
+                        Nome = cli.Nome,
+                        MarcaNome = mar.Nome,
+                        DataLocacao = ped.DataLocacao,
+                        DataEntrega = ped.DataEntrega
+                    } into agrupamento
+                    where agrupamento.Sum(pedCarro => pedCarro.ValorTrasacao) > 100000
                     select new PedidoResumido {
-                        PedidoId = ped.Id,
-                        NomeCliente = cli.Nome,
-                        NomeCarro = car.Nome,
-                        ModeloDoCarro = mod.Nome,
-                        MarcaDoCarro = mar.Nome,
-                        DataLocacaoPedido = ped.DataLocacao,
-                        DataEntregaPedido = ped.DataEntrega
+                        PedidoId = agrupamento.Key.Id,
+                        NomeCliente = agrupamento.Key.Nome,
+                        MarcaDoCarro = agrupamento.Key.MarcaNome,
+                        DataLocacaoPedido = agrupamento.Key.DataLocacao,
+                        DataEntregaPedido = agrupamento.Key.DataEntrega,
+                        ValorTotal = agrupamento.Sum(pedCarro => pedCarro.ValorTrasacao)
                     }
                 )
             );
-            
 
 
             /*
-            //===== Join nativo do entity
-            var pedidos = await _context.Pedidos.Join(
-                _context.Clientes,
-                ped => ped.ClienteId,
-                cli => cli.Id,
-                (ped, cli) => new {
-                    PedidoId = ped.Id,
-                    DataLocacaoPedido = ped.DataLocacao,
-                    DataEntregaPedido = ped.DataEntrega,
-                    NomeCliente = cli.Nome,
-                    CarroId = ped.CarroId
-                }
-            ).Join(
-                _context.Carros,
-                pedCli => pedCli.CarroId,
-                carro => carro.Id,
-                (pedCli, carro) => new {
-                    PedidoId = pedCli.PedidoId,
-                    NomeCliente = pedCli.NomeCliente,
-                    NomeCarro = carro.Nome,
-                    MarcaId = carro.MarcaId,
-                    DataLocacaoPedido = pedCli.DataLocacaoPedido,
-                    DataEntregaPedido = pedCli.DataEntregaPedido
-                }
-            ).Join(
-                _context.Marcas,
-                pedCliCarr => pedCliCarr.MarcaId,
-                marca => marca.Id,
-                (pedCliCarr, marca) => new PedidoResumido {
-                    PedidoId = pedCliCarr.PedidoId,
-                    NomeCliente = pedCliCarr.NomeCliente,
-                    NomeCarro = pedCliCarr.NomeCarro,
-                    MarcaDoCarro = marca.Nome,
-                    DataLocacaoPedido = pedCliCarr.DataLocacaoPedido,
-                    DataEntregaPedido = pedCliCarr.DataEntregaPedido
-                }
-            ).Skip(0).Take(10).ToListAsync();
+            SELECT 
+                `p`.`Id` AS `PedidoId`, 
+                `c`.`Nome` AS `NomeCliente`, 
+                `m0`.`Nome` AS `MarcaDoCarro`, 
+                `p`.`DataLocacao` AS `DataLocacaoPedido`, 
+                `p`.`DataEntrega` AS `DataEntregaPedido`,
+                sum(p0.ValorTrasacao) as ValorTotal
+            FROM `Pedidos` AS `p`
+            INNER JOIN `Clientes` AS `c` ON `p`.`ClienteId` = `c`.`Id`
+            INNER JOIN `PedidoCarros` AS `p0` ON `p`.`Id` = `p0`.`PedidoId`
+            INNER JOIN `Carros` AS `c0` ON `p0`.`CarroId` = `c0`.`Id`
+            INNER JOIN `Modelos` AS `m` ON `c0`.`ModeloId` = `m`.`Id`
+            INNER JOIN `Marcas` AS `m0` ON `m`.`MarcaId` = `m0`.`Id`
+            group by 
+                `p`.`Id` ,
+                `c`.`Nome`,
+                `m0`.`Nome`,
+                `p`.`DataLocacao`,
+                `p`.`DataEntrega` 
+            having sum(p0.ValorTrasacao)  > 100000
             */
 
+            /*
+            // subquery
+            SELECT 
+                `p`.`Id` AS `PedidoId`, 
+                `c`.`Nome` AS `NomeCliente`, 
+                `m0`.`Nome` AS `MarcaDoCarro`, 
+                `p`.`DataLocacao` AS `DataLocacaoPedido`, 
+                `p`.`DataEntrega` AS `DataEntregaPedido`,
+                sum(p0.ValorTrasacao) as ValorTotal,
+                (select crr.nome from carros crr where crr.id = c0.id) as NomeDoCarro,
+                (select m1.nome from modelos m1 where m1.id = m.id) as ModeloDoCarro
+            FROM `Pedidos` AS `p`
+            INNER JOIN `Clientes` AS `c` ON `p`.`ClienteId` = `c`.`Id`
+            INNER JOIN `PedidoCarros` AS `p0` ON `p`.`Id` = `p0`.`PedidoId`
+            INNER JOIN `Carros` AS `c0` ON `p0`.`CarroId` = `c0`.`Id`
+            INNER JOIN `Modelos` AS `m` ON `c0`.`ModeloId` = `m`.`Id`
+            INNER JOIN `Marcas` AS `m0` ON `m`.`MarcaId` = `m0`.`Id`
+            group by 
+                `p`.`Id` ,
+                `c`.`Nome`,
+                `m0`.`Nome`,
+                `p`.`DataLocacao`,
+                `p`.`DataEntrega`,
+                NomeDoCarro,
+                ModeloDoCarro
+            having  sum(p0.ValorTrasacao)  > 100000
+                
+            */
+            
             ViewBag.pedidos = pedidos;
             return View();
+            // return StatusCode(200, pedidos);
         }
 
         // GET: Pedidos/Details/5
@@ -187,7 +147,6 @@ namespace locacao_veiculos.Controllers
             }
 
             var pedido = await _context.Pedidos
-                .Include(p => p.Carro)
                 .Include(p => p.Cliente)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (pedido == null)
@@ -201,7 +160,6 @@ namespace locacao_veiculos.Controllers
         // GET: Pedidos/Create
         public IActionResult Create()
         {
-            ViewData["CarroId"] = new SelectList(_context.Carros, "Id", "Nome");
             ViewData["ClienteId"] = new SelectList(_context.Clientes, "Id", "Nome");
             return View();
         }
@@ -211,7 +169,7 @@ namespace locacao_veiculos.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,ClienteId,CarroId,DataLocacao")] Pedido pedido)
+        public async Task<IActionResult> Create([Bind("Id,ClienteId,DataLocacao")] Pedido pedido)
         {
             if (ModelState.IsValid)
             {
@@ -220,9 +178,8 @@ namespace locacao_veiculos.Controllers
                 pedido.DataEntrega = pedido.DataLocacao.AddDays(dias);
                 _context.Add(pedido);
                 await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                return Redirect("/PedidoCarros?pedidoId=" + pedido.Id);
             }
-            ViewData["CarroId"] = new SelectList(_context.Carros, "Id", "Nome", pedido.CarroId);
             ViewData["ClienteId"] = new SelectList(_context.Clientes, "Id", "Nome", pedido.ClienteId);
             return View(pedido);
         }
@@ -240,7 +197,6 @@ namespace locacao_veiculos.Controllers
             {
                 return NotFound();
             }
-            ViewData["CarroId"] = new SelectList(_context.Carros, "Id", "Nome", pedido.CarroId);
             ViewData["ClienteId"] = new SelectList(_context.Clientes, "Id", "Nome", pedido.ClienteId);
             return View(pedido);
         }
@@ -250,7 +206,7 @@ namespace locacao_veiculos.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,ClienteId,CarroId,DataLocacao,DataEntrega")] Pedido pedido)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,ClienteId,DataLocacao,DataEntrega")] Pedido pedido)
         {
             if (id != pedido.Id)
             {
@@ -277,7 +233,6 @@ namespace locacao_veiculos.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["CarroId"] = new SelectList(_context.Carros, "Id", "Nome", pedido.CarroId);
             ViewData["ClienteId"] = new SelectList(_context.Clientes, "Id", "Nome", pedido.ClienteId);
             return View(pedido);
         }
@@ -291,7 +246,6 @@ namespace locacao_veiculos.Controllers
             }
 
             var pedido = await _context.Pedidos
-                .Include(p => p.Carro)
                 .Include(p => p.Cliente)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (pedido == null)

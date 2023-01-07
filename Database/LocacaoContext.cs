@@ -13,4 +13,5 @@ public class LocacaoContext: DbContext
     public DbSet<Pedido> Pedidos { get; set; } = default!;
     public DbSet<Cliente> Clientes { get; set; } = default!;
     public DbSet<Configuracao> Configuracoes { get; set; } = default!;
+    public DbSet<PedidoCarro> PedidoCarros { get; set; } = default!;
 }

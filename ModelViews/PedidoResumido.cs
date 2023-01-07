@@ -9,4 +9,5 @@ public struct PedidoResumido
     public string MarcaDoCarro { get;set; }
     public DateTime DataLocacaoPedido { get;set; }
     public DateTime DataEntregaPedido { get;set; }
+    public double ValorTotal { get;set; }
 }

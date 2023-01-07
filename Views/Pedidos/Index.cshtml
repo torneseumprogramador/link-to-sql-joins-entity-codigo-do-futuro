@@ -15,10 +15,15 @@
 
 <p>
     <a asp-action="Create">Create New</a>
+    <br>
+    <a asp-controller="PedidoCarros" asp-action="Index">Pedidos dos carros</a>
 </p>
 <table class="table">
     <thead>
         <tr>
+            <th>
+                #
+            </th>
             <th>
                 Cliente
             </th>
@@ -30,6 +35,9 @@
             </th>
             <th>
                 Modelo
+            </th>
+            <th>
+                Valor Total
             </th>
             <th>
                 Data de Locação
@@ -44,6 +52,9 @@
         @foreach (PedidoResumido pedido in ViewBag.pedidos) {
             <tr>
                 <td>
+                    @pedido.PedidoId
+                </td>
+                <td>
                     @pedido.NomeCliente
                 </td>
                 <td>
@@ -54,6 +65,9 @@
                 </td>
                 <td>
                     @pedido.ModeloDoCarro
+                </td>
+                <td>
+                    R$ @pedido.ValorTotal
                 </td>
                 <td>
                     @pedido.DataLocacaoPedido.ToString("dd/MM/yyyy HH:mm")
