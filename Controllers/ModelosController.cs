@@ -26,6 +26,13 @@ namespace locacao_veiculos.Controllers
             return View(await locacaoContext.ToListAsync());
         }
 
+        [Route("/modelos.json")]
+        public async Task<IActionResult> JsonFiltradoMarca(int marcaId)
+        {
+            var locacaoContext = _context.Modelos.Where(m => m.MarcaId == marcaId);
+            return StatusCode(200, await locacaoContext.ToListAsync());
+        }
+
         // GET: Modelos/Details/5
         public async Task<IActionResult> Details(int? id)
         {
