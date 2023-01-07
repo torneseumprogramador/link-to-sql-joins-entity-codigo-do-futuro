@@ -21,8 +21,36 @@ namespace locacao_veiculos.Controllers
         }
 
         // GET: Pedidos
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int page = 1)
         {
+            var take = 5;
+            var skip = take * (page - 1);
+
+             var marcas =  await Task.FromResult(
+                (
+                    from marca in _context.Marcas
+                    join modelo in _context.Modelos on marca.Id equals modelo.MarcaId into MarcaModeloLeft
+                    from subMarcaModelo in MarcaModeloLeft.DefaultIfEmpty()
+                    where marca.Nome.Contains("m")
+                    select new {
+                        Id = marca.Id,
+                        Nome = marca.Nome
+                    }
+                ).Skip(skip).Take(take) // calculado
+                // ).Skip(0).Take(5) // pagina 1
+                // ).Skip(5).Take(5) // pagina 2
+                // ).Skip(10).Take(5) // pagina 3
+            );
+
+            Console.WriteLine("======================");
+
+            foreach(var marca in marcas)
+            {
+                Console.WriteLine(marca.Nome);
+            }
+
+            Console.WriteLine("======================");
+
             /*
             // query força bruta
             var pedidos = new List<PedidoResumido>();
@@ -58,10 +86,13 @@ namespace locacao_veiculos.Controllers
                 }
             }
             */
+            
             /*
             // query força bruta encapsulado
-
             object[] parameters =  { 1 };
+
+            var limit = 10;
+            var offset = 0;
 
             var query = $@"""
                     SELECT 
@@ -76,26 +107,29 @@ namespace locacao_veiculos.Controllers
                     INNER JOIN Carros AS c0 ON p.CarroId = c0.Id
                     INNER JOIN Marcas AS m ON c0.MarcaId = m.Id
                     where p.Id={0}
+                    limit {limit} offset {offset}
             """;
             var pedidos2 = new SqlQueryFromRaw(_context).SqlQueryRaw(query, parameters);
             */
             
             // ==== link to sql
             var pedidos =  await Task.FromResult(
-                from ped in _context.Pedidos
-                join cli in _context.Clientes on ped.ClienteId equals cli.Id
-                join car in _context.Carros on ped.CarroId equals car.Id
-                join mod in _context.Modelos on car.ModeloId equals mod.Id
-                join mar in _context.Marcas on mod.MarcaId equals mar.Id
-                select new PedidoResumido {
-                    PedidoId = ped.Id,
-                    NomeCliente = cli.Nome,
-                    NomeCarro = car.Nome,
-                    ModeloDoCarro = mod.Nome,
-                    MarcaDoCarro = mar.Nome,
-                    DataLocacaoPedido = ped.DataLocacao,
-                    DataEntregaPedido = ped.DataEntrega
-                }
+                (
+                    from ped in _context.Pedidos
+                    join cli in _context.Clientes on ped.ClienteId equals cli.Id
+                    join car in _context.Carros on ped.CarroId equals car.Id
+                    join mod in _context.Modelos on car.ModeloId equals mod.Id
+                    join mar in _context.Marcas on mod.MarcaId equals mar.Id
+                    select new PedidoResumido {
+                        PedidoId = ped.Id,
+                        NomeCliente = cli.Nome,
+                        NomeCarro = car.Nome,
+                        ModeloDoCarro = mod.Nome,
+                        MarcaDoCarro = mar.Nome,
+                        DataLocacaoPedido = ped.DataLocacao,
+                        DataEntregaPedido = ped.DataEntrega
+                    }
+                )
             );
             
 
@@ -137,7 +171,7 @@ namespace locacao_veiculos.Controllers
                     DataLocacaoPedido = pedCliCarr.DataLocacaoPedido,
                     DataEntregaPedido = pedCliCarr.DataEntregaPedido
                 }
-            ).ToListAsync();
+            ).Skip(0).Take(10).ToListAsync();
             */
 
             ViewBag.pedidos = pedidos;
