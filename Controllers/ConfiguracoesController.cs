@@ -7,9 +7,11 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using locacao_veiculos.Database;
 using locacao_veiculos.Models;
+using admin_cms.Filtros;
 
 namespace locacao_veiculos.Controllers
 {
+    [LogadoAttribute]
     public class ConfiguracoesController : Controller
     {
         private readonly LocacaoContext _context;

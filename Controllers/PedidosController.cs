@@ -8,9 +8,11 @@ using Microsoft.EntityFrameworkCore;
 using locacao_veiculos.Database;
 using locacao_veiculos.Models;
 using locacao_veiculos.ModelViews;
+using admin_cms.Filtros;
 
 namespace locacao_veiculos.Controllers
 {
+    [LogadoAttribute]
     public class PedidosController : Controller
     {
         private readonly LocacaoContext _context;

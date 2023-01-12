@@ -12,6 +12,7 @@ public class HomeController : Controller
 
     public IActionResult Index()
     {
+        ViewBag.logado = !string.IsNullOrEmpty(this.HttpContext.Request.Cookies["admin-codigo-do-futuro"]);
         return View();
     }
 
