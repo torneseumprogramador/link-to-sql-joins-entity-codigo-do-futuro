@@ -10,6 +10,7 @@ using locacao_veiculos.Models;
 using locacao_veiculos.DTOs;
 using Microsoft.Net.Http.Headers;
 using System.Collections.Specialized;
+using locacao_veiculos.Servicos;
 
 namespace locacao_veiculos.Controllers
 {
@@ -30,7 +31,8 @@ namespace locacao_veiculos.Controllers
                 return View("Index");
             }
 
-            if(!(loginDTO.Email == "teste@teste.com" && loginDTO.Password == "123456"))
+
+            if(!LoginService.Logar(loginDTO.Email, loginDTO.Password))
             {
                 ViewBag.erro = "Usuário ou senha inválidos";
                 return View("Index");

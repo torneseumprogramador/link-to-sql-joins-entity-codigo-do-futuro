@@ -1,7 +1,12 @@
 using locacao_veiculos.Database;
 using Microsoft.EntityFrameworkCore;
+using locacao_veiculos.ModelViews;
+using System.Reflection.Metadata;
+using Microsoft.Data.SqlClient;
+using MySqlConnector;
+using locacao_veiculos.DTOs;
 
-namespace locacao_veiculos.ModelViews;
+namespace locacao_veiculos.Servicos;
 
 public struct SqlQueryFromRaw
 {
@@ -11,24 +16,19 @@ public struct SqlQueryFromRaw
         _context = context;
     }
 
-    public List<PedidoResumido> SqlQueryRaw(string query, object[] parameters)
+    public List<PedidoResumido> SqlQueryRaw(string query, List<SqlParamDTO>? parameters = null)
     {
         var pedidos = new List<PedidoResumido>();
         using (var command = _context.Database.GetDbConnection().CreateCommand())
         {
-            command.CommandText = """
-                SELECT 
-                    p.Id,
-                    c.Nome AS NomeCliente,
-                    c0.Nome AS NomeCarro,
-                    m.Nome AS MarcaDoCarro,
-                    p.DataLocacao AS DataLocacaoPedido,
-                    p.DataEntrega AS DataEntregaPedido
-                FROM Pedidos AS p
-                INNER JOIN Clientes AS c ON p.ClienteId = c.Id
-                INNER JOIN Carros AS c0 ON p.CarroId = c0.Id
-                INNER JOIN Marcas AS m ON c0.MarcaId = m.Id
-            """;
+            command.CommandText = query;
+            if(parameters is not null)
+            {
+                foreach(SqlParamDTO param in parameters)
+                {
+                    command.Parameters.Add(new MySqlParameter(param.Key,param.Value));
+                }
+            }
 
             _context.Database.OpenConnection();
             using (var result = command.ExecuteReader())
